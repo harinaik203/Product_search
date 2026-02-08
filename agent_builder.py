@@ -5,69 +5,60 @@ from dotenv import load_dotenv
 from exception import CustomException
 
 from agno.agent import Agent, RunResponse
-from agno.models.google import Gemini
-from agno.tools.serpapi import SerpApiTools
-from agno.tools.googlesearch import GoogleSearchTools
+from agno.models.openrouter import OpenRouter
 
 # Load environment variables
 load_dotenv()
 
-# API Keys
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-SERP_API_KEY = os.getenv("SERP_API_KEY")
+# API Key
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 
 @dataclass
 class ProductAgent:
     """
-    Builds a product search agent that fetches
-    real-time product price information from the web.
+    LLM-only Product Search Agent.
+    Generates realistic price insights for products in the Indian market.
     """
 
     def build_agent(self) -> Agent:
         try:
-            # Initialize Gemini LLM
-            llm_model = Gemini(
-                id="gemini-2.5-flash-lite",
-                api_key=GOOGLE_API_KEY,
-                temperature=0.1,
-                max_output_tokens=2048
+            # Initialize OpenRouter LLM (no tool calling)
+            llm_model = OpenRouter(
+                id="mistralai/mistral-7b-instruct",
+                api_key=OPENROUTER_API_KEY,
+                temperature=0.2,
+                max_tokens=2048
             )
 
-            # Build the web search agent
-            web_search_agent = Agent(
+            agent = Agent(
                 name="Product Search Agent",
-                role="Search the web for verified product pricing information in India.",
+                role="Generate product price insights for the Indian market.",
                 model=llm_model,
-                tools=[
-                    SerpApiTools(api_key=SERP_API_KEY),
-                    GoogleSearchTools()
-                ],
-                description=[
-                    "You are a product search expert that must rely on web search tools for pricing."
-                ],
                 instructions="""
-You are NOT allowed to answer from memory.
+You are a product price analysis assistant for India.
 
-Step 1: Search the web using SerpApiTools for product prices in India
-Step 2: Verify results using GoogleSearchTools
-Step 3: Extract prices in Indian Rupees (₹)
-Step 4: If multiple prices are found, show a range
-Step 5: Provide source links
+TASK:
+- Provide a realistic price overview for the given product in India.
 
-Rules:
-- Use web search results ONLY
-- Do NOT say "price not found" if any result exists
-- Prefer Indian sellers and official sources
-- Do NOT hallucinate prices
+GUIDELINES:
+- Mention common Indian platforms such as Amazon, Flipkart, local retailers
+- Provide approximate price ranges in INR (₹)
+- Clearly state that prices may vary by seller, location, and time
+- Do NOT claim real-time verification
+- Do NOT generate fake product links
+- Be clear, structured, and concise
+
+OUTPUT FORMAT:
+## Product Overview
+## Estimated Price Range (India)
+## Popular Platforms
+## Notes / Disclaimer
 """,
-                goal="Retrieve real-time product pricing information from Indian online sources.",
-                tool_call_limit=10,
-                show_tool_calls=False,
                 markdown=True
             )
 
-            return web_search_agent
+            return agent
 
         except Exception as e:
             raise CustomException(e)
