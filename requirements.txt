@@ -2,6 +2,6 @@ streamlit
 agno==1.1.1
 python-dotenv
 markdown
-google-search-results
-googlesearch-python
-openrouter
+
+# OpenRouter dependency
+openai
